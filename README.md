@@ -11,7 +11,8 @@ Telegram-бот бегового чата Diehard в Екатеринбурге.
 1. Создайте ZIP-архив для загрузки в Cloud Functions:
 
    ```bash
-   zip -r function.zip index.py requirements.txt bot
+   zip -r function.zip index.py requirements.txt bot \
+     -x '*__pycache__*' '*.pyc'
    ```
 
 2. Создайте функцию с параметрами:
