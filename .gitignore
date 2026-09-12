@@ -8,3 +8,6 @@ __pycache__/
 *.egg-info/
 work/
 outputs/
+.wrangler/
+function.zip
+.venv.broken/

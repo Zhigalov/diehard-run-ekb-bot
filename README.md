@@ -3,10 +3,20 @@
 Telegram-бот бегового чата Diehard в Екатеринбурге. Первая версия приветствует
 пользователя после команды `/start`.
 
-## Запуск в Yandex Cloud Functions
+## Запуск через Cloudflare Relay и Yandex Cloud Functions
 
-Основной способ запуска — Telegram webhook, который вызывает Python-функцию.
-Точка входа функции находится в `index.handler`.
+Из-за недоступности Telegram API из Yandex Cloud запросы идут через небольшой
+Cloudflare Worker в обе стороны:
+
+```text
+Telegram -> Cloudflare Worker -> API Gateway -> Cloud Function
+Cloud Function -> Cloudflare Worker -> Telegram Bot API
+```
+
+Worker не хранит сообщения. Он проверяет webhook-секрет, пересылает обновление
+функции и разрешает Bot API-запросы только для токена этого бота.
+
+### 1. Yandex Cloud Function
 
 1. Создайте ZIP-архив для загрузки в Cloud Functions:
 
@@ -29,21 +39,65 @@ Telegram-бот бегового чата Diehard в Екатеринбурге.
    - `BOT_TOKEN` — токен от [@BotFather](https://t.me/BotFather);
    - `WEBHOOK_SECRET` — случайная строка для проверки запросов Telegram.
 
-4. После создания версии функции скопируйте HTTPS-адрес вида
-   `https://functions.yandexcloud.net/<function-id>`.
+4. Создайте API Gateway с POST-маршрутом `/webhook`, интегрированным с функцией,
+   и сохраните адрес вида `https://<gateway>.apigw.yandexcloud.net/webhook`.
 
-5. Создайте локальный `.env` по примеру, заполните три значения и зарегистрируйте
-   webhook с компьютера, на котором доступен Telegram API:
+### 2. Cloudflare Worker
 
-   ```bash
-   cp .env.example .env
-   set -a
-   source .env
-   set +a
-   python -m scripts.set_webhook
-   ```
+Для деплоя нужен Node.js. Из корня репозитория выполните:
 
-6. Откройте бота в Telegram и отправьте `/start`.
+```bash
+cd relay
+npx wrangler login
+npx wrangler secret put BOT_TOKEN
+npx wrangler secret put WEBHOOK_SECRET
+npx wrangler secret put UPSTREAM_URL
+npx wrangler deploy
+```
+
+Wrangler запросит значения интерактивно:
+
+- `BOT_TOKEN` — тот же токен BotFather, который задан в функции;
+- `WEBHOOK_SECRET` — тот же секрет, который задан в функции;
+- `UPSTREAM_URL` — полный адрес API Gateway с `/webhook`.
+
+После деплоя сохраните адрес Worker вида
+`https://diehard-run-ekb-bot-relay.<account>.workers.dev`.
+
+### 3. Подключение функции к relay
+
+Создайте новую версию функции на Python 3.12 и добавьте к существующим
+переменным окружения:
+
+```text
+TELEGRAM_API_BASE_URL=https://diehard-run-ekb-bot-relay.<account>.workers.dev
+```
+
+Пересоберите ZIP перед загрузкой, чтобы в нём был обновлённый `index.py`:
+
+```bash
+zip -r function.zip index.py requirements.txt bot \
+  -x '*__pycache__*' '*.pyc'
+```
+
+### 4. Регистрация webhook
+
+В локальном `.env` укажите адрес Worker:
+
+```text
+WEBHOOK_URL=https://diehard-run-ekb-bot-relay.<account>.workers.dev/webhook
+```
+
+Затем зарегистрируйте webhook с компьютера, на котором доступен Telegram API:
+
+```bash
+set -a
+source .env
+set +a
+python -m scripts.set_webhook
+```
+
+Откройте бота в Telegram и отправьте новый `/start` после регистрации webhook.
 
 Файл `.env` исключён из Git и Docker-контекста. Не публикуйте токен бота,
 webhook-секрет и содержимое `.env`.

@@ -6,6 +6,7 @@ from os import environ
 class Config:
     bot_token: str
     webhook_secret: str | None = None
+    telegram_api_base_url: str | None = None
 
     @classmethod
     def from_env(cls, *, require_webhook_secret: bool = False) -> "Config":
@@ -17,4 +18,10 @@ class Config:
         if require_webhook_secret and not webhook_secret:
             raise RuntimeError("WEBHOOK_SECRET environment variable is required")
 
-        return cls(bot_token=token, webhook_secret=webhook_secret)
+        telegram_api_base_url = environ.get("TELEGRAM_API_BASE_URL", "").strip() or None
+
+        return cls(
+            bot_token=token,
+            webhook_secret=webhook_secret,
+            telegram_api_base_url=telegram_api_base_url,
+        )

@@ -4,6 +4,8 @@ import json
 from typing import Any
 
 from aiogram import Bot
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.types import Update
 
 from bot.config import Config
@@ -34,10 +36,14 @@ def _decode_body(event: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
-def _get_bot(token: str) -> Bot:
+def _get_bot(token: str, api_base_url: str | None = None) -> Bot:
     global _telegram_bot
     if _telegram_bot is None:
-        _telegram_bot = Bot(token=token)
+        if api_base_url:
+            session = AiohttpSession(api=TelegramAPIServer.from_base(api_base_url))
+            _telegram_bot = Bot(token=token, session=session)
+        else:
+            _telegram_bot = Bot(token=token)
     return _telegram_bot
 
 
@@ -51,7 +57,7 @@ async def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     ):
         return {"statusCode": 401, "body": "Unauthorized"}
 
-    telegram_bot = _get_bot(config.bot_token)
+    telegram_bot = _get_bot(config.bot_token, config.telegram_api_base_url)
     update = Update.model_validate(_decode_body(event), context={"bot": telegram_bot})
     await dispatcher.feed_update(telegram_bot, update)
     return {"statusCode": 200, "body": "OK"}

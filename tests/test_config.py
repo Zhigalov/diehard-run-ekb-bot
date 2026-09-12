@@ -9,6 +9,13 @@ def test_config_reads_bot_token(monkeypatch: pytest.MonkeyPatch) -> None:
     assert Config.from_env().bot_token == "test-token"
 
 
+def test_config_reads_telegram_api_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BOT_TOKEN", "test-token")
+    monkeypatch.setenv("TELEGRAM_API_BASE_URL", "https://relay.example.com/")
+
+    assert Config.from_env().telegram_api_base_url == "https://relay.example.com/"
+
+
 def test_config_rejects_missing_bot_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("BOT_TOKEN", raising=False)
 
