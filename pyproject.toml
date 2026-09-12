@@ -3,9 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "long-na-plotinke-bot"
+name = "diehard-run-ekb-bot"
 version = "0.1.0"
-description = "Telegram bot for the Long na Plotinke running community"
+description = "Telegram bot for the Diehard running community in Yekaterinburg"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiogram==3.31.0",
