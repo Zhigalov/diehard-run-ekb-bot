@@ -16,7 +16,7 @@ async def main() -> None:
         await telegram_bot.set_webhook(
             url=webhook_url,
             secret_token=config.webhook_secret,
-            allowed_updates=["message"],
+            allowed_updates=["message", "chat_join_request", "callback_query"],
             drop_pending_updates=True,
         )
         info = await telegram_bot.get_webhook_info()
