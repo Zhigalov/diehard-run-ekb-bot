@@ -14,3 +14,13 @@ def test_config_rejects_missing_bot_token(monkeypatch: pytest.MonkeyPatch) -> No
 
     with pytest.raises(RuntimeError, match="BOT_TOKEN"):
         Config.from_env()
+
+
+def test_config_requires_webhook_secret_for_cloud_function(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("BOT_TOKEN", "test-token")
+    monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
+
+    with pytest.raises(RuntimeError, match="WEBHOOK_SECRET"):
+        Config.from_env(require_webhook_secret=True)

@@ -1,19 +1,10 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram import Bot
 
 from bot.config import Config
-from bot.messages import WELCOME_TEXT
-
-dispatcher = Dispatcher()
-
-
-@dispatcher.message(CommandStart())
-async def welcome(message: Message) -> None:
-    await message.answer(WELCOME_TEXT)
+from bot.handlers import dispatcher
 
 
 async def main() -> None:
