@@ -9,9 +9,13 @@ from aiogram.types import (
     Message,
 )
 
+from bot.captcha import CAPTCHA_PREFIX, create_captcha, verify_captcha
+from bot.config import Config
 from bot.messages import (
+    CAPTCHA_TEXT,
+    CAPTCHA_WRONG_TEXT,
+    JOIN_APPROVED_TEXT,
     JOIN_REQUEST_MISSING_TEXT,
-    RULES_ACCEPTED_TEXT,
     RULES_TEXT,
     WELCOME_TEXT,
 )
@@ -32,6 +36,17 @@ def parse_accept_rules_callback_data(data: str) -> tuple[int, int] | None:
         return int(parts[1]), int(parts[2])
     except ValueError:
         return None
+
+
+def captcha_keyboard(chat_id: int, user_id: int, secret: str) -> tuple[str, InlineKeyboardMarkup]:
+    question, buttons = create_captcha(chat_id, user_id, secret)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=label, callback_data=callback_data)]
+            for label, callback_data in buttons
+        ]
+    )
+    return question, keyboard
 
 
 @dispatcher.message(CommandStart())
@@ -78,9 +93,39 @@ async def accept_rules(callback: CallbackQuery) -> None:
         await callback.answer("Эта кнопка предназначена другому пользователю", show_alert=True)
         return
 
+    config = Config.from_env(require_webhook_secret=True)
+    question, keyboard = captcha_keyboard(
+        chat_id,
+        callback.from_user.id,
+        config.webhook_secret or "",
+    )
+    if callback.message:
+        await callback.message.edit_text(
+            f"{CAPTCHA_TEXT}\n\n{question}",
+            reply_markup=keyboard,
+        )
+    await callback.answer()
+
+
+@dispatcher.callback_query(F.data.startswith(f"{CAPTCHA_PREFIX}:"))
+async def check_captcha(callback: CallbackQuery) -> None:
+    config = Config.from_env(require_webhook_secret=True)
+    answer = verify_captcha(callback.data or "", config.webhook_secret or "")
+    if answer is None:
+        await callback.answer("Некорректная или устаревшая кнопка", show_alert=True)
+        return
+
+    if callback.from_user.id != answer.user_id:
+        await callback.answer("Эта кнопка предназначена другому пользователю", show_alert=True)
+        return
+
+    if not answer.is_correct:
+        await callback.answer(CAPTCHA_WRONG_TEXT, show_alert=True)
+        return
+
     try:
         await callback.bot.approve_chat_join_request(
-            chat_id=chat_id,
+            chat_id=answer.chat_id,
             user_id=callback.from_user.id,
         )
     except TelegramBadRequest:
@@ -88,5 +133,5 @@ async def accept_rules(callback: CallbackQuery) -> None:
         return
 
     if callback.message:
-        await callback.message.edit_text(RULES_ACCEPTED_TEXT)
+        await callback.message.edit_text(JOIN_APPROVED_TEXT)
     await callback.answer()
