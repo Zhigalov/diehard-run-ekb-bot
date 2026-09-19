@@ -26,6 +26,7 @@ from bot.messages import (
 dispatcher = Dispatcher()
 ACCEPT_RULES_PREFIX = "accept_rules"
 WELCOME_IMAGE_PATH = Path(__file__).with_name("assets") / "welcome.jpg"
+CHAT_INVITE_URL = "https://t.me/+44lQo2A8CjIwMzQy"
 
 
 def accept_rules_callback_data(chat_id: int, user_id: int) -> str:
@@ -53,14 +54,28 @@ def captcha_keyboard(chat_id: int, user_id: int, secret: str) -> tuple[str, Inli
     return question, keyboard
 
 
-async def send_welcome(bot: Bot, chat_id: int) -> None:
+async def send_welcome(
+    bot: Bot,
+    chat_id: int,
+    reply_markup: InlineKeyboardMarkup | None = None,
+) -> None:
     await bot.send_photo(chat_id=chat_id, photo=FSInputFile(WELCOME_IMAGE_PATH))
-    await bot.send_message(chat_id=chat_id, text=WELCOME_TEXT, parse_mode="HTML")
+    await bot.send_message(
+        chat_id=chat_id,
+        text=WELCOME_TEXT,
+        parse_mode="HTML",
+        reply_markup=reply_markup,
+    )
 
 
 @dispatcher.message(CommandStart())
 async def welcome(message: Message) -> None:
-    await send_welcome(message.bot, message.chat.id)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🏃 Присоединиться к чату", url=CHAT_INVITE_URL)]
+        ]
+    )
+    await send_welcome(message.bot, message.chat.id, reply_markup=keyboard)
 
 
 @dispatcher.chat_join_request()
