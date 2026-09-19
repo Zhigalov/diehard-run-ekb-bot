@@ -83,6 +83,7 @@ async def show_rules(join_request: ChatJoinRequest) -> None:
     await join_request.bot.send_message(
         chat_id=join_request.user_chat_id,
         text=RULES_TEXT,
+        parse_mode="HTML",
         reply_markup=keyboard,
     )
 
