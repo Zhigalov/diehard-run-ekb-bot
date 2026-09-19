@@ -1,9 +1,12 @@
-from aiogram import Dispatcher, F
+from pathlib import Path
+
+from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.types import (
     CallbackQuery,
     ChatJoinRequest,
+    FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
@@ -22,6 +25,7 @@ from bot.messages import (
 
 dispatcher = Dispatcher()
 ACCEPT_RULES_PREFIX = "accept_rules"
+WELCOME_IMAGE_PATH = Path(__file__).with_name("assets") / "welcome.jpg"
 
 
 def accept_rules_callback_data(chat_id: int, user_id: int) -> str:
@@ -49,9 +53,14 @@ def captcha_keyboard(chat_id: int, user_id: int, secret: str) -> tuple[str, Inli
     return question, keyboard
 
 
+async def send_welcome(bot: Bot, chat_id: int) -> None:
+    await bot.send_photo(chat_id=chat_id, photo=FSInputFile(WELCOME_IMAGE_PATH))
+    await bot.send_message(chat_id=chat_id, text=WELCOME_TEXT, parse_mode="HTML")
+
+
 @dispatcher.message(CommandStart())
 async def welcome(message: Message) -> None:
-    await message.answer(WELCOME_TEXT)
+    await send_welcome(message.bot, message.chat.id)
 
 
 @dispatcher.chat_join_request()
@@ -70,10 +79,7 @@ async def show_rules(join_request: ChatJoinRequest) -> None:
             ]
         ]
     )
-    await join_request.bot.send_message(
-        chat_id=join_request.user_chat_id,
-        text=WELCOME_TEXT,
-    )
+    await send_welcome(join_request.bot, join_request.user_chat_id)
     await join_request.bot.send_message(
         chat_id=join_request.user_chat_id,
         text=RULES_TEXT,
