@@ -26,7 +26,7 @@ from bot.messages import (
 dispatcher = Dispatcher()
 ACCEPT_RULES_PREFIX = "accept_rules"
 WELCOME_IMAGE_PATH = Path(__file__).with_name("assets") / "welcome.jpg"
-CHAT_INVITE_URL = "https://t.me/+44lQo2A8CjIwMzQy"
+CHAT_INVITE_URL = "https://t.me/+bYB9WdteULE1NGYy"
 
 
 def accept_rules_callback_data(chat_id: int, user_id: int) -> str:
