@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramServerError
 from aiogram.filters import CommandStart
 from aiogram.types import (
     CallbackQuery,
@@ -26,7 +26,7 @@ from bot.messages import (
 dispatcher = Dispatcher()
 ACCEPT_RULES_PREFIX = "accept_rules"
 WELCOME_IMAGE_PATH = Path(__file__).with_name("assets") / "welcome.jpg"
-CHAT_INVITE_URL = "https://t.me/+bYB9WdteULE1NGYy"
+_welcome_photo_ids: dict[int, str] = {}
 
 
 def accept_rules_callback_data(chat_id: int, user_id: int) -> str:
@@ -59,7 +59,22 @@ async def send_welcome(
     chat_id: int,
     reply_markup: InlineKeyboardMarkup | None = None,
 ) -> None:
-    await bot.send_photo(chat_id=chat_id, photo=FSInputFile(WELCOME_IMAGE_PATH))
+    config = Config.from_env()
+    try:
+        photo = await bot.send_photo(
+            chat_id=chat_id,
+            photo=(
+                _welcome_photo_ids.get(bot.id)
+                or config.welcome_photo_url
+                or FSInputFile(WELCOME_IMAGE_PATH)
+            ),
+            request_timeout=3,
+        )
+        if photo.photo:
+            _welcome_photo_ids[bot.id] = photo.photo[-1].file_id
+    except (TelegramNetworkError, TelegramServerError, TelegramBadRequest):
+        # An optional photo must not block the welcome text or the admission rules.
+        _welcome_photo_ids.pop(bot.id, None)
     await bot.send_message(
         chat_id=chat_id,
         text=WELCOME_TEXT,
@@ -70,11 +85,14 @@ async def send_welcome(
 
 @dispatcher.message(CommandStart())
 async def welcome(message: Message) -> None:
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🏃 Присоединиться к чату", url=CHAT_INVITE_URL)]
-        ]
-    )
+    config = Config.from_env()
+    keyboard = None
+    if config.chat_invite_url:
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🏃 Присоединиться к чату", url=config.chat_invite_url)]
+            ]
+        )
     await send_welcome(message.bot, message.chat.id, reply_markup=keyboard)
 
 

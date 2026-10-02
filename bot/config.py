@@ -7,6 +7,8 @@ class Config:
     bot_token: str
     webhook_secret: str | None = None
     telegram_api_base_url: str | None = None
+    chat_invite_url: str | None = None
+    welcome_photo_url: str | None = None
 
     @classmethod
     def from_env(cls, *, require_webhook_secret: bool = False) -> "Config":
@@ -24,4 +26,6 @@ class Config:
             bot_token=token,
             webhook_secret=webhook_secret,
             telegram_api_base_url=telegram_api_base_url,
+            chat_invite_url=environ.get("CHAT_INVITE_URL", "").strip() or None,
+            welcome_photo_url=environ.get("WELCOME_PHOTO_URL", "").strip() or None,
         )
