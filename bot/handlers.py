@@ -68,10 +68,14 @@ async def send_welcome(
                 or config.welcome_photo_url
                 or FSInputFile(WELCOME_IMAGE_PATH)
             ),
+            caption=WELCOME_TEXT,
+            parse_mode="HTML",
+            reply_markup=reply_markup,
             request_timeout=3,
         )
         if photo.photo:
             _welcome_photo_ids[bot.id] = photo.photo[-1].file_id
+        return
     except (TelegramNetworkError, TelegramServerError, TelegramBadRequest):
         # An optional photo must not block the welcome text or the admission rules.
         _welcome_photo_ids.pop(bot.id, None)
