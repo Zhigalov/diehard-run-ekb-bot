@@ -1,8 +1,10 @@
+import asyncio
+import time
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramServerError
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
     ChatJoinRequest,
@@ -14,6 +16,8 @@ from aiogram.types import (
 
 from bot.captcha import CAPTCHA_PREFIX, create_captcha, verify_captcha
 from bot.config import Config
+from bot import subscribers
+from bot.reminders import SUBSCRIPTION_NOTE, send_reminder
 from bot.messages import (
     CAPTCHA_TEXT,
     CAPTCHA_WRONG_TEXT,
@@ -58,8 +62,10 @@ async def send_welcome(
     bot: Bot,
     chat_id: int,
     reply_markup: InlineKeyboardMarkup | None = None,
+    subscription_notice: bool = False,
 ) -> None:
     config = Config.from_env()
+    text = WELCOME_TEXT + (SUBSCRIPTION_NOTE if subscription_notice else "")
     try:
         photo = await bot.send_photo(
             chat_id=chat_id,
@@ -68,7 +74,7 @@ async def send_welcome(
                 or config.welcome_photo_url
                 or FSInputFile(WELCOME_IMAGE_PATH)
             ),
-            caption=WELCOME_TEXT,
+            caption=text,
             parse_mode="HTML",
             reply_markup=reply_markup,
             request_timeout=3,
@@ -81,7 +87,7 @@ async def send_welcome(
         _welcome_photo_ids.pop(bot.id, None)
     await bot.send_message(
         chat_id=chat_id,
-        text=WELCOME_TEXT,
+        text=text,
         parse_mode="HTML",
         reply_markup=reply_markup,
     )
@@ -90,6 +96,10 @@ async def send_welcome(
 @dispatcher.message(CommandStart())
 async def welcome(message: Message) -> None:
     config = Config.from_env()
+    subscribed = message.chat.type == "private" and subscribers.enabled()
+    if subscribed:
+        store = await asyncio.to_thread(subscribers.get_store)
+        await asyncio.to_thread(store.subscribe, message.chat.id, int(time.time()))
     keyboard = None
     if config.chat_invite_url:
         keyboard = InlineKeyboardMarkup(
@@ -97,7 +107,30 @@ async def welcome(message: Message) -> None:
                 [InlineKeyboardButton(text="🏃 Присоединиться к чату", url=config.chat_invite_url)]
             ]
         )
-    await send_welcome(message.bot, message.chat.id, reply_markup=keyboard)
+    await send_welcome(message.bot, message.chat.id, reply_markup=keyboard,
+                       subscription_notice=subscribed)
+
+
+@dispatcher.message(Command("reminder_test"), F.chat.type == "private")
+async def reminder_test(message: Message) -> None:
+    # Preview only. Does not subscribe or touch scheduled delivery state.
+    await send_reminder(message.bot, message.chat.id)
+
+
+@dispatcher.message(Command("subscribe", "unsubscribe"), F.chat.type == "private")
+async def subscription_command(message: Message) -> None:
+    if not subscribers.enabled():
+        await message.answer("Напоминания пока не настроены.")
+        return
+    store = await asyncio.to_thread(subscribers.get_store)
+    unsubscribe = (message.text or "").split()[0].split("@")[0] == "/unsubscribe"
+    if unsubscribe:
+        await asyncio.to_thread(store.unsubscribe, message.chat.id)
+        await message.answer("Напоминания отключены. Включить снова: /subscribe")
+    else:
+        await asyncio.to_thread(store.subscribe, message.chat.id, int(time.time()))
+        await message.answer("🔔 Напомню о регистрации каждую пятницу в 12:00 МСК.\n"
+                             "Отключить: /unsubscribe")
 
 
 @dispatcher.chat_join_request()

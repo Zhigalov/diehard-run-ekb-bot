@@ -88,12 +88,12 @@ def create_version(config: dict, previous: dict, source: Path) -> dict:
     # Preserve deployed env and pinned Lockbox references. Never load a local .env.
     args = ["serverless", "function", "version", "create",
             "--function-id", config["function_id"], "--runtime", "python312",
-            "--entrypoint", "index.handler", "--memory", "512MB",
-            "--execution-timeout", "30s", "--concurrency", "1",
+            "--entrypoint", config.get("entrypoint", "index.handler"), "--memory", "512MB",
+            "--execution-timeout", config.get("execution_timeout", "30s"), "--concurrency", "1",
             "--service-account-id", config["service_account_id"],
             "--log-group-id", config["log_group_id"], "--min-log-level", "info",
             "--source-path", str(source), "--tags", "candidate-" + uuid.uuid4().hex[:12]]
-    environment = previous.get("environment", {})
+    environment = {**previous.get("environment", {}), **config.get("environment", {})}
     # Refuse to put literal credentials into process arguments.
     if any("TOKEN" in key or "SECRET" in key for key in environment):
         raise RuntimeError("Move secret environment values to Lockbox before deployment")
@@ -155,12 +155,38 @@ def deploy(config: dict, rollback: str | None = None) -> None:
     print(f"Deployed {candidate['id']} to folder {config['folder_id']}")
 
 
+def deploy_reminders(config: dict) -> None:
+    function_id = config["reminder_function_id"]
+    function = yc("serverless", "function", "get", function_id)
+    if function["folder_id"] != config["folder_id"]:
+        raise RuntimeError("Reminder function is outside the configured folder")
+    # Same pinned secrets and runtime env as the live bot. No local .env involved.
+    source = yc("serverless", "function", "version", "get-by-tag",
+                "--function-id", config["function_id"], "--tag", "production")
+    target = {**config, "function_id": function_id, "entrypoint": "bot.reminders.handler",
+              "execution_timeout": "90s"}
+    with tempfile.TemporaryDirectory(prefix="diehard-reminders-") as temporary:
+        archive = Path(temporary) / "function.zip"
+        package(archive)
+        candidate = create_version(target, source, archive)
+    tag = next(t for t in candidate["tags"] if t.startswith("candidate-"))
+    response = yc("serverless", "function", "invoke", function_id, "--tag", tag,
+                  "--data-stdin", stdin=json.dumps({"healthcheck": True}))
+    if response.get("statusCode") != 200:
+        raise RuntimeError("Reminder storage health check failed; production unchanged")
+    yc("serverless", "function", "version", "set-tag", candidate["id"], "--tag", "production")
+    print(f"Deployed reminder worker {candidate['id']}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rollback", metavar="VERSION_ID")
     args = parser.parse_args()
     try:
         deploy(json.loads(CONFIG.read_text()), args.rollback)
+        config = json.loads(CONFIG.read_text())
+        if not args.rollback and config.get("reminder_function_id"):
+            deploy_reminders(config)
     except Exception as error:
         # Never print raw network/subprocess exception text.
         print(f"Deployment failed ({type(error).__name__}). Production tag was not intentionally "

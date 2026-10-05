@@ -7,5 +7,12 @@
   "secret_id": "e6qvkokjk5tcc6mo3l57",
   "gateway_id": "d5dhb8jkkt9alb2q5okq",
   "gateway_url": "https://d5dhb8jkkt9alb2q5okq.jki8ffxa.apigw.yandexcloud.net/webhook",
-  "relay_url": "https://diehard-run-ekb-bot-relay.sergey-zhigalov.workers.dev/webhook"
+  "relay_url": "https://diehard-run-ekb-bot-relay.sergey-zhigalov.workers.dev/webhook",
+  "reminder_function_id": "d4e2tghappu9ijsds5fh",
+  "reminder_trigger_id": "a1su2p34161cib6o7ack",
+  "database_id": "etn2vamt5dp9a3mqmi8f",
+  "environment": {
+    "YDB_ENDPOINT": "grpcs://ydb.serverless.yandexcloud.net:2135",
+    "YDB_DATABASE": "/ru-central1/b1g2035eiff72jcbalkd/etn2vamt5dp9a3mqmi8f"
+  }
 }

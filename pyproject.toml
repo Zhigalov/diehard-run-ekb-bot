@@ -9,6 +9,7 @@ description = "Telegram bot for the Diehard running community in Yekaterinburg"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiogram==3.31.0",
+    "ydb==3.33.2",
 ]
 
 [project.optional-dependencies]

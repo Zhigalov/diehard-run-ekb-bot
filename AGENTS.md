@@ -22,3 +22,10 @@ require editing Cloudflare. If changing the relay code, use its separate workflo
 For rollback use `python -m scripts.deploy --rollback VERSION_ID`; this tests
 the target and moves `production`, not `$latest`. Do not delete old infrastructure
 or rollback versions as part of a routine deployment.
+
+`scripts.deploy` also deploys the private reminder worker when configured.
+Do not publicly expose that function or run a broadcast to test it. Use its
+private healthcheck or `/reminder_test` (only the calling private chat).
+The Friday timer starts at 09:00 UTC / 12:00 Moscow and drains/retries for one hour.
+Keep subscriber YDB data across deployments. Never seed historical users from logs.
+Routine deployment must preserve the timer and subscription state.
