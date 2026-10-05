@@ -1,0 +1,11 @@
+{
+  "cloud_id": "b1g2035eiff72jcbalkd",
+  "folder_id": "b1g8lql532mgpncbv2q5",
+  "function_id": "d4ebphqq28pmfdfghhqn",
+  "service_account_id": "aje7hfikj2nh31nbsjfq",
+  "log_group_id": "e23b8joe1h1obkbe9qh8",
+  "secret_id": "e6qvkokjk5tcc6mo3l57",
+  "gateway_id": "d5dhb8jkkt9alb2q5okq",
+  "gateway_url": "https://d5dhb8jkkt9alb2q5okq.jki8ffxa.apigw.yandexcloud.net/webhook",
+  "relay_url": "https://diehard-run-ekb-bot-relay.sergey-zhigalov.workers.dev/webhook"
+}
