@@ -129,7 +129,7 @@ async def subscription_command(message: Message) -> None:
         await message.answer("Напоминания отключены. Включить снова: /subscribe")
     else:
         await asyncio.to_thread(store.subscribe, message.chat.id, int(time.time()))
-        await message.answer("🔔 Напомню о регистрации каждую пятницу в 12:00 МСК.\n"
+        await message.answer("🔔 Напомню о регистрации каждую пятницу в 14:00.\n"
                              "Отключить: /unsubscribe")
 
 

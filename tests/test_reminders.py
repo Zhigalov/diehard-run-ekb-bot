@@ -118,6 +118,10 @@ async def test_subscription_command(monkeypatch, command, expected):
     await handlers.subscription_command(message)
     assert getattr(store, expected).call_args.args[0] == 777
     message.answer.assert_awaited_once()
+    if expected == "subscribe":
+        text = message.answer.await_args.args[0]
+        assert "14:00" in text
+        assert "МСК" not in text
 
 
 @pytest.mark.asyncio
@@ -159,7 +163,13 @@ async def test_preview_link_and_unsubscribe():
     args = bot.send_message.await_args.kwargs
     assert args["chat_id"] == 777
     assert "/unsubscribe" in args["text"]
+    assert "появляется по пятницам" not in args["text"]
     assert args["reply_markup"].inline_keyboard[0][0].url == "https://diehard.run/trainings"
+
+
+def test_subscription_notice_uses_local_time():
+    assert "14:00" in reminders.SUBSCRIPTION_NOTE
+    assert "МСК" not in reminders.SUBSCRIPTION_NOTE
 
 
 @pytest.mark.asyncio

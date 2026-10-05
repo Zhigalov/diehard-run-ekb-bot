@@ -16,12 +16,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPrevie
 REMINDER_TEXT = (
     "🏃 Планы на воскресенье? Не забудь зарегистрироваться на лонг!\n\n"
     "Перейди на diehard.run/trainings, выбери нужную тренировку и нажми "
-    "«Принять участие» — кнопка появляется по пятницам.\n\n"
+    "«Принять участие».\n\n"
     "До встречи на старте!\n\n"
     "Отключить напоминания: /unsubscribe"
 )
 SUBSCRIPTION_NOTE = (
-    "\n\n🔔 Напомню о регистрации в пятницу в 12:00 МСК. Отключить: /unsubscribe"
+    "\n\n🔔 Напомню о регистрации в пятницу в 14:00. Отключить: /unsubscribe"
 )
 MOSCOW = ZoneInfo("Europe/Moscow")
 
